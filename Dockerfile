@@ -1,21 +1,20 @@
-
-FROM node:18-alpine AS deps
+FROM node:16-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 COPY package.json yarn.lock ./
-RUN  yarn install
+RUN  npm install
 
-FROM node:18-alpine AS builder
+FROM node:16-alpine AS deps
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED 1
 
-RUN yarn run build
+RUN npm run build
 
-FROM node:18-alpine AS runner
+FROM node:16-alpine AS deps
 WORKDIR /app
 
 ENV NODE_ENV production
@@ -32,6 +31,19 @@ USER nextjs
 
 EXPOSE 80
 
-ENV PORT 80
-
 CMD ["npm", "start"]
+
+FROM node:16-alpine
+# Setting working directory. All the path will be relative to WORKDIR
+WORKDIR /usr/src/app
+# Installing dependencies
+COPY package*.json ./
+RUN npm install
+# Copying source files
+COPY . .
+# Building app
+RUN npm run build
+EXPOSE 80
+#ENV PORT 80
+# Running the app
+CMD [ "npm", "start" ]
